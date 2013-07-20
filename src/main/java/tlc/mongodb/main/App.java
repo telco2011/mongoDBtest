@@ -1,7 +1,12 @@
 package tlc.mongodb.main;
 
+import java.io.File;
+import java.io.IOException;
 import java.util.List;
 
+import org.codehaus.jackson.JsonGenerationException;
+import org.codehaus.jackson.map.JsonMappingException;
+import org.codehaus.jackson.map.ObjectMapper;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.support.GenericXmlApplicationContext;
 import org.springframework.data.mongodb.core.MongoOperations;
@@ -16,6 +21,9 @@ import tlc.mongodb.model.User;
 
 public class App {
 
+	private static final String JSON_PATH = "json/";
+	private static final String JSON_EXT = ".json";
+	
 	private static int counter = 1;
 
 	public static void main(String[] args) {
@@ -61,6 +69,8 @@ public class App {
 		printConsole("Total de usuarios en la base de datos= " + mongoOperation.findAll(User.class).size());
 		printUsers(mongoOperation.findAll(User.class));
 		
+		createJSONfile(mongoOperation.findAll(User.class));
+		
 		// Se eliminia un usuario de la base de datos
 		printConsole("Se elimina el usuario 1.");
 		mongoOperation.remove(searchUser1Query, User.class);
@@ -69,8 +79,28 @@ public class App {
 		printConsole("Total de usuarios en la base de datos= " + mongoOperation.findAll(User.class).size());
 		printUsers(mongoOperation.findAll(User.class));
 		
-		mongoOperation.dropCollection(User.COLLECTION);
+		//mongoOperation.dropCollection(User.COLLECTION);
 		printConsole("Total de usuarios en la base de datos= " + mongoOperation.findAll(User.class).size());
+	}
+
+	private static void createJSONfile(List<User> users) {
+		for(User u : users) {
+			createJSONfile(u, u.getNickname());
+		}
+	}
+
+	private static void createJSONfile(User user, String fileName) {
+		ObjectMapper mapper = new ObjectMapper();
+		
+		try {
+			mapper.writeValue(new File(JSON_PATH + fileName + JSON_EXT), user);
+		} catch (JsonGenerationException jge) {
+			jge.printStackTrace();
+		} catch (JsonMappingException jme) {
+			jme.printStackTrace();
+		} catch (IOException ioe) {
+			ioe.printStackTrace();
+		}
 	}
 
 	private static void printUsers(List<User> listUser) {
