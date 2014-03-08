@@ -8,15 +8,16 @@ import org.codehaus.jackson.JsonGenerationException;
 import org.codehaus.jackson.map.JsonMappingException;
 import org.codehaus.jackson.map.ObjectMapper;
 import org.springframework.context.ApplicationContext;
-import org.springframework.context.support.GenericXmlApplicationContext;
-import org.springframework.data.mongodb.core.MongoOperations;
+import org.springframework.context.annotation.AnnotationConfigApplicationContext;
 import org.springframework.data.mongodb.core.query.Criteria;
 import org.springframework.data.mongodb.core.query.Query;
 import org.springframework.data.mongodb.core.query.Update;
 
+import tlc.mongodb.config.MongoConfiguration;
 import tlc.mongodb.model.SocialAccount;
 import tlc.mongodb.model.SocialType;
 import tlc.mongodb.model.User;
+import tlc.mongodb.repository.MongoRepository;
 
 
 public class App {
@@ -29,58 +30,58 @@ public class App {
 	public static void main(String[] args) {
 
 		@SuppressWarnings("resource")
-		ApplicationContext ctx = new GenericXmlApplicationContext("spring-context.xml");
-		MongoOperations mongoOperation = (MongoOperations) ctx.getBean("mongoOperations");
+		ApplicationContext ctx = new AnnotationConfigApplicationContext(MongoConfiguration.class);
+		MongoRepository mongoRepository = ctx.getBean(MongoRepository.class);
 
 		User user1 = new User("user1username", "user1psw", "user1nickname");
 		User user2 = new User("user2username", "user2psw", "user2nickname");
 
-		// Se guarda el usuario en la base de datos
-		mongoOperation.save(user1);
-		mongoOperation.save(user2);
+		// Save user in mongo database
+		mongoRepository.saveUser(user1);
+		mongoRepository.saveUser(user2);
 
-		// El usuario introducido
+		// The user
 		printConsole("Usuario introducido: " + user1);
 
-		// Sentencia de búsqueda de usuario por NICKNAME
+		// Query to search the user by NICKNAME
 		Query searchUser1Query = new Query(Criteria.where(User.NICKNAME).is(user1.getNickname()));
 		Query searchUser2Query = new Query(Criteria.where(User.NICKNAME).is(user2.getNickname()));
 
-		// Búsqueda de usuario en la base de datos
-		User savedUser = mongoOperation.findOne(searchUser1Query, User.class);
+		// Searching user in the mongo database
+		User savedUser = mongoRepository.findUser(searchUser1Query);
 		printConsole("Usuario recuperado de base de datos: " + savedUser);
 
-		// Actualización del nombre de usuario y contraseña de usuario 1
-		mongoOperation.updateFirst(searchUser1Query, Update.update(User.USERNAME, "newuser1username"), User.class);
-		mongoOperation.updateFirst(searchUser1Query, Update.update(User.PASSWORD, "newuser1psw"), User.class);
+		// Update user name and password
+		mongoRepository.updateUser(searchUser1Query, Update.update(User.USERNAME, "newuser1username"));
+		mongoRepository.updateUser(searchUser1Query, Update.update(User.PASSWORD, "newuser1psw"));
 
-		// Búsqueda del usuario modificado en la base de datos
-		User updatedUser = mongoOperation.findOne(new Query(Criteria.where(User.NICKNAME).is(user1.getNickname())), User.class);
+		// Searching modified user in the mongo database
+		User updatedUser = mongoRepository.findUser(new Query(Criteria.where(User.NICKNAME).is(user1.getNickname())));
 		printConsole("Usuario modificado recuperado de base de datos: " + updatedUser);
 
-		// Actualización de las cuentas sociales del usuario 2
-		User savedUser2 = mongoOperation.findOne(searchUser2Query, User.class);
+		// Update user social accounts
+		User savedUser2 = mongoRepository.findUser(searchUser2Query);
 		savedUser2.addSocialAccount(new SocialAccount(SocialType.FACEBOOK));
-		mongoOperation.save(savedUser2);
-		savedUser2 = mongoOperation.findOne(searchUser2Query, User.class);
+		mongoRepository.saveUser(savedUser2);
+		savedUser2 = mongoRepository.findUser(searchUser2Query);
 		printConsole("Usuario recuperado de base de datos: " + savedUser2);
 		
-		// Lista los usuarios de la base de datos
-		printConsole("Total de usuarios en la base de datos= " + mongoOperation.findAll(User.class).size());
-		printUsers(mongoOperation.findAll(User.class));
+		// User list in the mongo database
+		printConsole("Total de usuarios en la base de datos= " + mongoRepository.findAllUsers().size());
+		printUsers(mongoRepository.findAllUsers());
 		
-		createJSONfile(mongoOperation.findAll(User.class));
+		createJSONfile(mongoRepository.findAllUsers());
 		
-		// Se eliminia un usuario de la base de datos
+		// Remove a user in the mongo database
 		printConsole("Se elimina el usuario 1.");
-		mongoOperation.remove(searchUser1Query, User.class);
+		mongoRepository.removeUser(searchUser1Query);
 
-		// Lista los usuarios de la base de datos
-		printConsole("Total de usuarios en la base de datos= " + mongoOperation.findAll(User.class).size());
-		printUsers(mongoOperation.findAll(User.class));
+		// User list in the mongo database
+		printConsole("Total de usuarios en la base de datos= " + mongoRepository.findAllUsers().size());
+		printUsers(mongoRepository.findAllUsers());
 		
 		//mongoOperation.dropCollection(User.COLLECTION);
-		printConsole("Total de usuarios en la base de datos= " + mongoOperation.findAll(User.class).size());
+		printConsole("Total de usuarios en la base de datos= " + mongoRepository.findAllUsers().size());
 	}
 
 	private static void createJSONfile(List<User> users) {
